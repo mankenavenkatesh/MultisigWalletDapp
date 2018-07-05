@@ -1,4 +1,4 @@
-# Webpack Truffle Box
+# MultiSig Wallet Dapp
 Tutorial to create simple dapp using Truffle, webpack, html,
 This project Includes contracts, migrations, tests, user interface and webpack build pipeline.
 
