@@ -1,5 +1,5 @@
 pragma solidity ^0.4.20;
-/* import "../homework/Abs" */
+
 contract MultiSig {
   using SafeMath for uint256;
 
@@ -11,32 +11,38 @@ contract MultiSig {
   uint private totalContributions;
   mapping (address => uint) public contributionsMap;
   mapping (address => bool) public signerList;
-  mapping (address => uint) proposals;
-  address[] submittersList;
+  mapping(address => uint) _beneficiaryProposalIndex;  
+  mapping (address => uint) amountToWithdraw;
   address[] contributorsList;
+  Proposal[] proposals;
 
-  struct Proposal {
-      uint valueToWithdraw;
-      address[] approvedSigners;
-      address[] rejectedSigners;
-
-  }
+    struct Proposal {
+        uint _valueInWei;
+        address _beneficiary;
+        uint approvalCount;
+        uint rejectedCount;
+        mapping (address => uint) sigatures;
+    }
 
   // Constructor
-  constructor () {
+  constructor () public {
     contractOwner = msg.sender;
     isContractActive = false;
-    signerList[address(0x008e32781624eaa8344901ef4c013d4b1d8c8da7ce)] = true;
-    signerCount = signerCount.add(1);
-    signerList[address(0x0052e3c8a97cdd571c6656c96f6348ba8d4a9a0db7)] = true;
-    signerCount = signerCount.add(1);
-    signerList[address(0x005340c7783b6ec40c4b66f3ce1598051d776a882f)] = true;
-    signerCount = signerCount.add(1);
+    
+    signerList[0x420cc357928fA496E12E328126eE160Ba05524aE] = true;
+    signerList[0xc104573409fB708033711c13e5eA17e73F1d5Ac7] = true;
+    signerList[0x9627819DB8a5970C33E0097Ab1079E7E8a6Cc809] = true;
+    signerCount = signerCount.add(3);
+    
+    proposals.push(Proposal(0, msg.sender, signerCount, 0));
   }
 
   // Events
   event ReceivedContribution(address indexed _contributor, uint _valueInWei);
   event ProposalSubmitted(address indexed _beneficiary, uint _valueInWei);
+  event ProposalApproved(address indexed _approver, address indexed _beneficiary, uint _valueInWei);
+  event ProposalRejected(address indexed _rejecter, address indexed _beneficiary, uint _valueInWei);
+  event WithdrawPerformed(address indexed _beneficiary, uint _valueInWei);
 
   // Modifiers
   modifier onlyifContractStatusActive() {
@@ -51,35 +57,44 @@ contract MultiSig {
     require(signerList[msg.sender], "You are not a signer!!");
     _;
   }
-  modifier onlyIfProposalApproved() {
-    require(proposals[msg.sender].approvedSigners.length > signerCount.div(2), "Your Proposal is not approved By majority of voters");
-    _;
-  }
-  modifier onlyIfProposalRejected() {
-    require(proposals[msg.sender].rejectedSigners.length > signerCount.div(2) , "Your Proposal is not rejected By majority of voters");
-    _;
-  }
-  modifier onlyIfWithdrawPending(uint _value) {
-    require(proposals[msg.sender].valueToWithdraw >= _value);
-    _;
-  }
-  modifier onlyIfWithdrawCompleted() {
-    require(proposals[msg.sender].valueToWithdraw == 0);
-  }
-  modifier onlyIfSubmissionValueIsAccepted(uint _value) {
-    require(_value <= totalContributions.div(10));
-    _;
-  }
-  modifier onlyIfNoExistingProposals() {
-    require(proposals[msg.sender].valueToWithdraw == 0 || proposals[msg.sender].rejectedSigners.lenght > signerCount.div(2));
-    _;
-  }
+  
+  modifier onlyIfLessThan10Percent(uint _amount) {
+        require(_amount <= totalContributions.div(10));
+     _;   
+    }
+    
+    modifier onlyIfNoOpenProposal() {
+          require(_beneficiaryProposalIndex[msg.sender] == 0 || isProposalClosed(msg.sender));
+        _;
+    }
+    
+    modifier onlyIfNotVoted(address _beneficiary) {
+        require(_beneficiaryProposalIndex[_beneficiary] > 0);
+        require(proposals[_beneficiaryProposalIndex[_beneficiary]].sigatures[msg.sender] == 0);
+        _;
+    }
+    
+    modifier onlyIfWithdrawable(uint _amountToWithdraw) {        
+          require(amountToWithdraw[msg.sender] >= _amountToWithdraw);
+        _;
+    }
+    
+    function isProposalClosed(address _beneficiary) public view returns (bool) {
+        if(proposals[_beneficiaryProposalIndex[_beneficiary]].rejectedCount > signerCount.div(2)) {
+            return true;
+        }
+        if(proposals[_beneficiaryProposalIndex[_beneficiary]].approvalCount > signerCount.div(2)) {
+            return true;
+        }   
+        return false;     
+    }
+    
 
-function owner() external returns(address){
+function owner() external view returns(address){
   return contractOwner;
 }
 
-function () payable acceptContributions {
+function () payable public acceptContributions {
   require(msg.value > 0);
    contributionsMap[msg.sender] = contributionsMap[msg.sender].add(msg.value);
    totalContributions = totalContributions.add(msg.value);
@@ -116,25 +131,60 @@ function getTotalContributions() external view returns (uint) {
      return totalContributions;
 }
 
-function submitProposal(uint _valueInWei) onlyIfContractStatusActive onlyIfSubmissionValueIsAccepted(_valueInWei) onlyIfNoExistingProposals external {
-     proposals[msg.sender] = Proposal(_valueInWei);
-     emit ProposalSubmitted(msg.sender, _valueInWei);
+function submitProposal(uint _valueInWei) external onlyifContractStatusActive onlyIfNoOpenProposal onlyIfLessThan10Percent(_valueInWei) {
+   proposals.push(Proposal(_valueInWei, msg.sender, 0, 0));
+  _beneficiaryProposalIndex[msg.sender] = proposals.length - 1;
+  emit ProposalSubmitted(msg.sender, _valueInWei);
+}
+    
+function approve(address _beneficiary) external onlyifContractStatusActive onlySigner onlyIfNotVoted(_beneficiary) {
+    Proposal storage p = proposals[_beneficiaryProposalIndex[_beneficiary]];
+    p.sigatures[msg.sender] = 1;  
+    p.approvalCount = p.approvalCount.add(1);
+
+    if(p.approvalCount > signerCount.div(2)) {
+      amountToWithdraw[_beneficiary] = amountToWithdraw[_beneficiary].add(p._valueInWei);
+    }
+    emit ProposalApproved(msg.sender, _beneficiary, p._valueInWei);
+}
+    
+    function reject(address _beneficiary) external onlyifContractStatusActive onlySigner onlyIfNotVoted(_beneficiary) {
+        Proposal storage p = proposals[_beneficiaryProposalIndex[_beneficiary]];
+        p.sigatures[msg.sender] = 2;
+        p.rejectedCount++;
+        emit ProposalRejected(msg.sender, _beneficiary, p._valueInWei);
+    }
+  
+    function withdraw(uint _valueInWei) external onlyifContractStatusActive onlyIfWithdrawable(_valueInWei) {
+        amountToWithdraw[msg.sender] = amountToWithdraw[msg.sender].sub(_valueInWei);        
+        msg.sender.transfer(_valueInWei);
+        emit WithdrawPerformed(msg.sender, _valueInWei);
+    }
+    
+    function getSignerVote(address _signer, address _beneficiary) view external returns(uint) {
+        return proposals[_beneficiaryProposalIndex[_beneficiary]].sigatures[_signer];
+    }
+
+function listOpenBeneficiariesProposals() external view returns (address[]) {
+    address[] memory openBeneficiaries = new address[](proposals.length);
+    uint j=0;
+    for(uint i=1; i < proposals.length;i++) {
+        Proposal storage p = proposals[i];
+        if(p.rejectedCount <= signerCount.div(2) && p.approvalCount <= signerCount.div(2)) {
+            openBeneficiaries[j++] = p._beneficiary;
+        }
+    }
+    
+    address[] memory openBeneficiariesActual = new address[](j);
+    for(i=0;i<j;i++){
+        openBeneficiariesActual[i] = openBeneficiaries[i];
+    }
+    
+     return openBeneficiariesActual;
 }
 
-
-
-   /*
-    * Returns a list of beneficiaries for the open proposals. Open
-    * proposal is the one in which the majority of voters have not
-    * voted yet.
-    */
-   /* function listOpenBeneficiariesProposals() external view returns (address[]); */
-
-   /*
-    * Returns the value requested by the given beneficiary in his proposal.
-    */
    function getBeneficiaryProposal(address _beneficiary) external view returns (uint) {
-     return proposals[_beneficiary];
+     return proposals[_beneficiaryProposalIndex[_beneficiary]]._valueInWei;
    }
 
 }
