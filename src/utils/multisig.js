@@ -104,7 +104,8 @@ const MultiSig = {
 
     return new Promise((resolve, reject) => {
       self.instance.getBalance.call().then(balance => {
-        resolve(balance)
+        console.log(self.web3.fromWei(balance, "ether").c[0]);
+        resolve(self.web3.fromWei(balance, "ether").c[0])
       }).catch(err => {
         reject(err)
       })
@@ -117,7 +118,7 @@ const MultiSig = {
 
     return new Promise((resolve, reject) => {
       self.instance.getContributorAmount.call(address).then(contributionAmount => {          
-        resolve({address: address, amt: contributionAmount.c[0]})
+        resolve({address: address, amt: self.web3.fromWei(contributionAmount, "ether").c[0]})
       }).catch(err => {
         reject(err)
       })
@@ -128,8 +129,8 @@ const MultiSig = {
     let self = this
 
     return new Promise((resolve, reject) => {
-      self.instance.getTotalContributions.call().then(balance => {
-        resolve(balance.c[0])
+      self.instance.getTotalContributions.call().then(balance => {        
+        resolve(self.web3.fromWei(balance, "ether").c[0])
       }).catch(err => {
         reject(err)
       })
@@ -153,7 +154,7 @@ const MultiSig = {
 
     return new Promise((resolve, reject) => {
       self.instance.getBeneficiaryProposal.call(address).then(proposalValue => {        
-        resolve({address: address, value: proposalValue.c[0]})
+        resolve({address: address, value: self.web3.fromWei(proposalValue, "ether").c[0]})
       }).catch(err => {
         reject(err)
       })
@@ -174,9 +175,10 @@ const MultiSig = {
 
   withdraw: function (amt) {
     let self = this
-
+    console.log("Amount to withdraw-"+ amt);
     return new Promise((resolve, reject) => {
-      self.instance.withdraw(amt, {from: window.web3.eth.accounts[0]}).then(p => {
+      self.instance.withdraw(self.web3.toWei(amt, "ether"), {from: window.web3.eth.accounts[0]}).then(p => {
+        console.log("Withdraw Resolved");
         resolve(p)
       }).catch(err => {
         reject(err)
@@ -207,8 +209,8 @@ const MultiSig = {
   contribute: function (amount) {
     let self = this
     console.log(this.web3.eth.accounts[0]);
-    console.log(amount);
-    self.instance.sendTransaction({from: self.web3.eth.accounts[0], value: amount})
+    console.log("amount to contribute- "+amount);
+    return self.instance.sendTransaction({from: self.web3.eth.accounts[0], value: self.web3.toWei(amount, "ether")})
   },
 
   approve: function (address) {
@@ -220,7 +222,7 @@ const MultiSig = {
   submitproposal: function (value) {
     let self = this
 
-    return self.instance.submitProposal(value, {from: window.web3.eth.accounts[0]})
+    return self.instance.submitProposal(self.web3.toWei(value, "ether"), {from: window.web3.eth.accounts[0]})
   },
 
   reject: function (address) {

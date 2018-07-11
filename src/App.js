@@ -30,6 +30,7 @@ class App extends Component {
       withdrawamount: [],
       amountToWithdraw : 0,
       amountToContribute:0,
+      dummy : '',
     }
     this.handleContributeChange = this.handleContributeChange.bind(this);
     this.handleProposalAmountChange = this.handleProposalAmountChange.bind(this);    
@@ -51,15 +52,20 @@ class App extends Component {
       events.watch(function (err, ev) {
         self.walletevents(err, ev)
       })
-      this.fetchcontractowner()
-      this.fetchContractStatus()
-      this.fetchContractBalance()
-      this.getContributors()
-      this.getProposals()
+        this.initializeContract();
     })
     .catch(() => {
       console.log('Error finding web3.')
     })
+  }
+
+  initializeContract() {
+    this.fetchcontractowner()
+    this.fetchContractStatus()
+    this.fetchContractBalance()
+    this.fetchContractEthBalance()
+    this.getContributors()
+    this.getProposals()
   }
 
   fetchContractStatus() {    
@@ -81,19 +87,22 @@ class App extends Component {
 
   endContributionPeriod() {    
     self = this;
-    MultiSig.endContributionPeriod().then((result) => {        
-        self.fetchContractStatus();
+    MultiSig.endContributionPeriod().then((result) => {                
+        self.initializeContract();
     })
 }
 
   fetchContractBalance() {    
-    MultiSig.getTotalContributions().then((result) => {                   
+    MultiSig.getTotalContributions().then((result) => {  
+        
+      console.log(result);                 
           this.setState({contractbalance: result})     
     })
 }
 
 
-fetchContractEthBalance() {    
+fetchContractEthBalance() {   
+  console.log("balance in eth");  
   MultiSig.contractBalance().then((result) => {                   
         this.setState({contractEthBalance: result})     
   })
@@ -108,7 +117,9 @@ fetchContractEthBalance() {
   contribute(e) {
     e.preventDefault()
     console.log('amount to contribute', this.state.amountToContribute)
-    MultiSig.contribute(this.state.amountToContribute)
+    MultiSig.contribute(this.state.amountToContribute).then((response) => {
+      this.setState({lastTransaction : response.tx});
+    })
   }
 
   getContributors () {
@@ -148,7 +159,8 @@ fetchContractEthBalance() {
     console.log('Proposal Amount', this.state.proposalAmount)
     MultiSig.submitproposal(this.state.proposalAmount).then((response) => {
       console.log(response);
-      this.getProposals();
+      this.setState({lastTransaction : response.tx});
+      this.initializeContract();
     });
   }
 
@@ -186,6 +198,7 @@ fetchContractEthBalance() {
     e.preventDefault()
     console.log('Withdraw Proposal Amount', this.state.amountToWithdraw)
     MultiSig.withdraw(this.state.amountToWithdraw).then((response) => {
+      console.log("Withdraw Response-"+ response);
       this.setState({lastTransaction : response.tx});
       console.log(response);      
     });
