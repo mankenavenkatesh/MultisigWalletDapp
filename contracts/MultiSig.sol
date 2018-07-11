@@ -32,9 +32,9 @@ contract MultiSig {
     isContractActive = false;
     
     
-    signerList[0xDc0bb0F9dd63c9CCF63A8C64a452836A89B9f897] = true;
-    signerList[0x43d2D9c73A375E24A53eF9788937015247fD7E57] = true;
-    signerList[0xB698A1D6AF26a3a1A15980ed3989795E2aB9ECe4] = true;
+    signerList[0xfbA32783D7427a134c0A841A39331DB8fd174901] = true;
+    signerList[0xF9360ebe81DF82D32ebE6259F3e65f9B7BCb553C] = true;
+    signerList[0x3e6d1d46CF01E19F619d30d1e3942CfCd052C29F] = true;
     
     signerCount = signerCount.add(3);
     

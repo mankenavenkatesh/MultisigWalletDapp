@@ -219,11 +219,12 @@ fetchContractEthBalance() {
 
         <main className="container">
             <p>Contract Owner -  {this.state.contractOwner}</p>   
+               
             <p> Contract Status - {this.state.contractStatus} </p>         
-            <p> Contract Total Balance - {this.state.contractbalance} </p>
-            <p> Contract Eth Balance - {this.state.contractEthBalance} </p>        
+            <p> Contract Total Contribution - {this.state.contractbalance} </p>
+            {/* <p> Contract Eth Balance - {this.state.contractEthBalance} </p>         */}
             <p> Last Transacton hash - {this.state.lastTransaction} </p>
-
+            <p>All values are in ETHER</p>
         </main>
         
           { this.state.contractStatus!="Active" ? <div ><form onSubmit={this.contribute}>
