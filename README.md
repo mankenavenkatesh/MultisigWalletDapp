@@ -39,6 +39,7 @@ This project Includes contracts, migrations, tests, user interface and webpack b
 7. Run the webpack server for front-end hot reloading . Smart contract changes must be manually recompiled and migrated.
     ```javascript
     // Serves the front-end on http://localhost:8080
+    npm install
     npm run dev
     ```
 

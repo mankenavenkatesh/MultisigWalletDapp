@@ -9,6 +9,8 @@ contract MultiSig {
   uint private signerCount;
   uint private contributorCount;
   uint private totalContributions;
+  uint public availableContributions;
+  
   mapping (address => uint) public contributionsMap;
   mapping (address => bool) public signerList;
   mapping(address => uint) _beneficiaryProposalIndex;  
@@ -29,9 +31,11 @@ contract MultiSig {
     contractOwner = msg.sender;
     isContractActive = false;
     
-    signerList[0x420cc357928fA496E12E328126eE160Ba05524aE] = true;
-    signerList[0xc104573409fB708033711c13e5eA17e73F1d5Ac7] = true;
-    signerList[0x9627819DB8a5970C33E0097Ab1079E7E8a6Cc809] = true;
+    
+    signerList[0x579B27187c67e560DC5a7355533153313af7A503] = true;
+    signerList[0x8A7c7133F993da35a57bc0f1FE8c55B0F98902c6] = true;
+    signerList[0x09C0D15e6d9f1097BD565435FC366a261C2d5194] = true;
+    
     signerCount = signerCount.add(3);
     
     proposals.push(Proposal(0, msg.sender, signerCount, 0));
@@ -58,8 +62,9 @@ contract MultiSig {
     _;
   }
   
-  modifier onlyIfLessThan10Percent(uint _amount) {
-        require(_amount <= totalContributions.div(10));
+  modifier onlyIfValueAllowed(uint _amount) {
+        require(_amount.mul(10) <= totalContributions);
+        require(_amount <= availableContributions);
      _;   
     }
     
@@ -112,6 +117,7 @@ function () payable public acceptContributions {
 
 function endContributionPeriod() acceptContributions onlySigner external {
     require(totalContributions > 0);
+    availableContributions = totalContributions;
     isContractActive = true;
 }
 
@@ -131,9 +137,10 @@ function getTotalContributions() external view returns (uint) {
      return totalContributions;
 }
 
-function submitProposal(uint _valueInWei) external onlyifContractStatusActive onlyIfNoOpenProposal onlyIfLessThan10Percent(_valueInWei) {
+function submitProposal(uint _valueInWei) external onlyifContractStatusActive onlyIfNoOpenProposal onlyIfValueAllowed(_valueInWei) {
    proposals.push(Proposal(_valueInWei, msg.sender, 0, 0));
   _beneficiaryProposalIndex[msg.sender] = proposals.length - 1;
+  availableContributions = availableContributions.sub(_valueInWei);
   emit ProposalSubmitted(msg.sender, _valueInWei);
 }
     
@@ -152,6 +159,10 @@ function approve(address _beneficiary) external onlyifContractStatusActive onlyS
         Proposal storage p = proposals[_beneficiaryProposalIndex[_beneficiary]];
         p.sigatures[msg.sender] = 2;
         p.rejectedCount++;
+        
+        if(p.rejectedCount > signerCount.div(2)) {
+            availableContributions = availableContributions.add(p._valueInWei);
+        }
         emit ProposalRejected(msg.sender, _beneficiary, p._valueInWei);
     }
   
