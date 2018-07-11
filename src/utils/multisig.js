@@ -39,6 +39,7 @@ const MultiSig = {
     })
   },
 
+  
   getAllSigners: function () {
     let self = this
 
@@ -97,6 +98,19 @@ const MultiSig = {
       })
     })
   },
+
+  contractBalance: function () {
+    let self = this
+
+    return new Promise((resolve, reject) => {
+      self.instance.getBalance.call().then(balance => {
+        resolve(balance)
+      }).catch(err => {
+        reject(err)
+      })
+    })
+  },
+
 
   getContributorAmount: function (address) {
     let self = this

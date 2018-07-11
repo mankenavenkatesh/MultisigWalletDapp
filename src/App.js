@@ -21,6 +21,7 @@ class App extends Component {
       rejectaddress: '',
       acceptaddress: '',
       contractbalance: 0,
+      contractEthBalance : 0,
       lastTransaction : '',
       contributors: [{"address" : "temp", "amt" : 0}],
       contractaddress: 'address',
@@ -90,6 +91,15 @@ class App extends Component {
           this.setState({contractbalance: result})     
     })
 }
+
+
+fetchContractEthBalance() {    
+  MultiSig.contractBalance().then((result) => {                   
+        this.setState({contractEthBalance: result})     
+  })
+}
+
+
   
   handleContributeChange(event) {
     this.setState({amountToContribute: event.target.value});
@@ -197,7 +207,8 @@ class App extends Component {
         <main className="container">
             <p>Contract Owner -  {this.state.contractOwner}</p>   
             <p> Contract Status - {this.state.contractStatus} </p>         
-            <p> Contract Total Balance - {this.state.contractbalance} </p>    
+            <p> Contract Total Balance - {this.state.contractbalance} </p>
+            <p> Contract Eth Balance - {this.state.contractEthBalance} </p>        
             <p> Last Transacton hash - {this.state.lastTransaction} </p>
 
         </main>

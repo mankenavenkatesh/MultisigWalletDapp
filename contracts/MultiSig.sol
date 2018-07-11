@@ -41,6 +41,9 @@ contract MultiSig {
     proposals.push(Proposal(0, msg.sender, signerCount, 0));
   }
 
+  function getBalance() public returns (uint){
+    return address(this).balance;
+  }
   // Events
   event ReceivedContribution(address indexed _contributor, uint _valueInWei);
   event ProposalSubmitted(address indexed _beneficiary, uint _valueInWei);
